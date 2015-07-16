@@ -76,7 +76,7 @@ class Tagger(object):
         for phone in self.data:
             phone['noise'] = []
             for i, review in enumerate(phone['reviews']):
-                found = False
+                found = True
                 for word in self.tag_list:
                     if word in review[3] or word in review[1]:
                         found = True
