@@ -23,13 +23,13 @@ class Tagger(object):
         self.stopwords = stopwords.words('english')
         self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', ],
                             'battery': ['charge', 'longlasting', 'backup'],
-                            'sound': ['music', 'loud'],
+                            'sound': ['music', 'loud', 'voice'],
                             'display': ['bright', 'large', 'touchscreen', 'clear'],
                             'specs': ['heat', 'ram','bluetooth',],
                             'looks': ['color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build']
 }
         self.price_tag = ['price','expensive','cheap']
-        self.delivery_tag = ['fast','quick', 'on time', 'service']
+        self.delivery_tag = ['delivery', 'fast','quick', 'on time', 'service']
         self.warranty_tag = ['warranty']
         self.seller_tag = ['seller', 'vendor']
         
@@ -71,10 +71,20 @@ class Tagger(object):
                     tag_list.extend(attr_tags)
         return tag_list
             
-                
-if __name__ =='__main__' :
-    amazon = Tagger("review.json")
-    amazon.clean_data(joint=True)
+    def filter_bad_reviews(self):
+        self.tag_list = self.get_tag_list()
+        for phone in self.data:
+            phone['noise'] = []
+            for i, review in enumerate(phone['reviews']):
+                found = False
+                for word in self.tag_list:
+                    if word in review[3] or word in review[1]:
+                        found = True
+                        break
+                if found == False:
+                    phone['noise'].append(review) 
+                    phone['reviews'].pop(i)
+                    
             
         
         
