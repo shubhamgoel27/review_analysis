@@ -23,7 +23,7 @@ class Tagger(object):
         self.stopwords = stopwords.words('english')
         self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', ],
                             'battery': ['charge', 'longlasting', 'backup'],
-                            'sound': ['music', 'loud']
+                            'sound': ['music', 'loud'],
                             'display': ['bright', 'large', 'touchscreen', 'clear'],
                             'specs': ['heat', 'ram','bluetooth',],
                             'looks': ['color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build']
@@ -47,7 +47,7 @@ class Tagger(object):
         
     def remove_punc(self, text):
         '''returns the text without any punctuations'''
-        return ''.join([t for t in text if t not in string.punctuation])
+        return ''.join([t for t in text if t not in string.punctuation and t not in '0123456789'])
         
     def clean_data(self, joint=False):
         '''Strips the data of all stopwords, punctuations and tokenizes reviews'''
