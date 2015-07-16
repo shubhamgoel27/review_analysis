@@ -53,7 +53,7 @@ class Tagger(object):
         '''Strips the data of all stopwords, punctuations and tokenizes reviews'''
         for phone in self.data:
             for i, review in enumerate(phone['reviews']):
-                review = str(remove_punc(review[3].lower().encode('utf-8')))
+                review = str(self.remove_punc(review[3].lower().encode('utf-8')))
                 tokens = [word for word in nltk.word_tokenize(review) if word not in self.stopwords]
                 if joint == True:
                     tokens = ' '.join(tokens)
@@ -72,8 +72,9 @@ class Tagger(object):
         return tag_list
             
                 
-    
-            
+if __name__ =='__main__' :
+    amazon = Tagger("review.json")
+    amazon.clean_data(joint=True)
             
         
         
