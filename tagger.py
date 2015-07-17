@@ -22,7 +22,7 @@ class Tagger(object):
             for line in f:
                 self.data.append(json.loads(line))
         self.stopwords = stopwords.words('english')
-        self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', ],
+        self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', 'resolution' ],
                             'battery': ['charging','charge','charger', 'longlasting', 'backup', 'internal'],
                             'sound': ['music', 'loud', 'voice', 'volume'],
                             'display': ['touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
@@ -37,7 +37,7 @@ class Tagger(object):
         self.tags = {'product': self.product_tag, 'price': self.price_tag,
                      'seller': self.seller_tag, 'warranty': self.warranty_tag,
                      'delivery': self.delivery_tag}
-        
+        self.tagged_data = {}
     def compute_avg_rating(self):
         '''Stores the average rating value in data'''
         for phone in self.data:
@@ -101,6 +101,46 @@ class Tagger(object):
                 phone_reviews.extend(list_stem_words)
             list_review_word.extend(phone_reviews)
         self.noise_count = Counter(list_review_word)
+        
+    def tag_data(self):
+        for phone in self.data:
+            self.tagged_data[phone['title']] = {'product':{'camera':set(),'battery':set(), 
+                                                            'sound':set(), 'display':set(),
+                                                            'looks':set(),'specs':set()},
+                                                 'delivery':set(),'warranty':set(),
+                                                'seller':set(), 'price':set()}
+            for i, review in enumerate(phone['reviews']):
+                for tag in self.delivery_tag:
+                    if tag in review[3] or tag in review[1]:
+                        self.tagged_data[phone['title']]['delivery'].add(tuple(review))
+                        
+                for tag in self.seller_tag:
+                    if tag in review[3] or tag in review[1]:
+                        self.tagged_data[phone['title']]['seller'].add(tuple(review))
+                        
+                for tag in self.warranty_tag:
+                    if tag in review[3] or tag in review[1]:
+                        self.tagged_data[phone['title']]['warranty'].add(tuple(review))
+                        
+                for tag in self.price_tag:
+                    if tag in review[3] or tag in review[1]:
+                        self.tagged_data[phone['title']]['price'].add(tuple(review))
+                        
+                for tag in self.product_tag:
+                    for attr in self.product_tag[tag]:
+                        if attr in review[3] or attr in review[1]:
+                            self.tagged_data[phone['title']]['product'][tag].add(tuple(review))
+                        
+if __name__=='__main__':
+    amazon = Tagger('review.json')
+    amazon.clean_data(True)
+    amazon.filter_bad_reviews()
+    amazon.tag_data()
+    a = amazon.data[51]['title']
+    print amazon.tagged_data[a]['product']
+                  
+                    
+                
                     
             
         
