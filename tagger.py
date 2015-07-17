@@ -13,6 +13,7 @@ import string
 import nltk
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
+from collections import Counter
 
 class Tagger(object):
     def __init__(self, filename):
@@ -22,20 +23,20 @@ class Tagger(object):
                 self.data.append(json.loads(line))
         self.stopwords = stopwords.words('english')
         self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', ],
-                            'battery': ['charge', 'longlasting', 'backup'],
-                            'sound': ['music', 'loud', 'voice'],
-                            'display': ['bright', 'large', 'touchscreen', 'clear'],
-                            'specs': ['heat', 'ram','bluetooth',],
-                            'looks': ['color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build']
+                            'battery': ['charging','charge','charger', 'longlasting', 'backup', 'internal'],
+                            'sound': ['music', 'loud', 'voice', 'volume'],
+                            'display': ['touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
+                            'specs': ['memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
+                            'looks': ['look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
 }
-        self.price_tag = ['price','expensive','cheap']
-        self.delivery_tag = ['delivery', 'fast','quick', 'on time', 'service']
+        self.price_tag = ['budget','price','expensive','cheap', 'cost']
+        self.delivery_tag = ['delivery','delivered','deliver', 'fast','quick', 'on time', 'service']
         self.warranty_tag = ['warranty']
         self.seller_tag = ['seller', 'vendor']
         
         self.tags = {'product': self.product_tag, 'price': self.price_tag,
                      'seller': self.seller_tag, 'warranty': self.warranty_tag,
-                     'delivery': self.seller_tag}
+                     'delivery': self.delivery_tag}
         
     def compute_avg_rating(self):
         '''Stores the average rating value in data'''
@@ -47,7 +48,7 @@ class Tagger(object):
         
     def remove_punc(self, text):
         '''returns the text without any punctuations'''
-        return ''.join([t for t in text if t not in string.punctuation and t not in '0123456789'])
+        return ''.join([t for t in text if t not in string.punctuation and t not in '0123456789' and ord(t)<128])
         
     def clean_data(self, joint=False):
         '''Strips the data of all stopwords, punctuations and tokenizes reviews'''
@@ -84,6 +85,22 @@ class Tagger(object):
                 if found == False:
                     phone['noise'].append(review) 
                     phone['reviews'].pop(i)
+                    
+    def noise_filter(self) :
+        list_review_word = []
+        ls = SnowballStemmer('english')
+        for  phone in self.data:
+            phone_reviews = []
+            for i , content in enumerate(phone['noise']):
+                rating = content[0]
+                title = content[1]
+                author = content[2]
+                review = content[3]
+                list_words = nltk.word_tokenize(review)
+                list_stem_words = [ ls.stem(word) for word in list_words]
+                phone_reviews.extend(list_stem_words)
+            list_review_word.extend(phone_reviews)
+        self.noise_count = Counter(list_review_word)
                     
             
         
