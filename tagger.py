@@ -14,6 +14,8 @@ import nltk
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
 from collections import Counter
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 class Tagger(object):
     def __init__(self, filename):
@@ -24,7 +26,7 @@ class Tagger(object):
         self.stopwords = stopwords.words('english')
         self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', 'resolution' ],
                             'battery': ['charging','charge','charger', 'longlasting', 'backup', 'internal'],
-                            'sound': ['music', 'loud', 'voice', 'volume'],
+                            'sound': ['music', 'loud', 'voice', 'volume', 'headphone', 'head phone', 'microphone', 'mic'],
                             'display': ['touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
                             'specs': ['memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
                             'looks': ['look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
@@ -131,13 +133,40 @@ class Tagger(object):
                         if attr in review[3] or attr in review[1]:
                             self.tagged_data[phone['title']]['product'][tag].add(tuple(review))
                         
+    def store_mobile_list(self):
+        self.phone_list = self.tagged_data.keys()
+        self.phone_list.sort()
+                    
+    def get_mobile_reviews(self, mobile_name, tag = None, attr = None, limit=10):
+        print -1
+        similar_phones = process.extract(mobile_name, self.phone_list, limit = limit)
+        print similar_phones
+        print 0
+        matched_phone = similar_phones[0][0]
+        if tag != None:
+            if tag in self.tags.keys():
+                if attr==None:
+                    print 1
+                    return self.tagged_data[matched_phone][tag]
+                if attr in self.product_tag.keys() and tag=='product':
+                    print 2
+                    return self.tagged_data[matched_phone][tag][attr]
+                else:
+                    print 3
+                    return "Attribute not found"
+            else:
+                return "Tag not found"
+        return self.tagged_data[matched_phone]        
+        
 if __name__=='__main__':
     amazon = Tagger('review.json')
     amazon.clean_data(True)
     amazon.filter_bad_reviews()
     amazon.tag_data()
     a = amazon.data[51]['title']
-    print amazon.tagged_data[a]['product']
+    amazon.store_mobile_list()
+    #print amazon.tagged_data[a]['product']
+    
                   
                     
                 
