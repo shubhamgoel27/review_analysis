@@ -45,7 +45,7 @@ class Tagger(object):
                             'sound': ['sound','audio','music', 'loud', 'voice', 'volume', 'headphone', 'head phone', 'microphone', 'mic'],
                             'display': ['display', 'touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
                             'specs': ['specs', 'memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
-                            'looks': ['look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
+                            'build': ['durabl', 'durabil', 'look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
 }
         self.price_tag = ['budget','price','expensive','cheap', 'cost']
         self.delivery_tag = ['delivery','delivered','deliver', 'fast','quick', 'on time', 'service']
@@ -123,7 +123,7 @@ class Tagger(object):
         for phone in self.data:
             self.tagged_data[phone['title']] = {'product':{'camera':set(),'battery':set(), 
                                                             'sound':set(), 'display':set(),
-                                                            'looks':set(),'specs':set()},
+                                                            'build':set(),'specs':set()},
                                                  'delivery':set(),'warranty':set(),
                                                 'seller':set(), 'price':set()}
             for i, review in enumerate(phone['reviews']):
@@ -178,7 +178,7 @@ class Tagger(object):
         tokens = ' '.join(tokens)
         rev_dict = {'product':{'camera':False,'battery':False,
                                'sound':False, 'display':False,
-                               'looks':False,'specs':False},
+                               'build':False,'specs':False},
                     'delivery':False,
                     'warranty':False,
                     'seller':False,
@@ -191,13 +191,14 @@ class Tagger(object):
                 for tag in eval('self.' + category + '_tag'):
                     nearby_words = []
                     if tag in tokens:
-                        print 'entering tag in token'
-                        print tag
+                        #print 'entering tag in token'
+                        #print tag
+                        rev_dict[category] = True
                         tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
                         for position in tag_pos:
                             before = tokens[:position].split()
                             after = tokens[position:].split()
-                            print before, after
+                            #print before, after
                             if len(before) > 0:
                                 nearby_words.extend([before[-1]])
                                 if len(before) > 1:
@@ -228,6 +229,7 @@ class Tagger(object):
                     nearby_words = []
                     for tag in self.product_tag[attrs]:
                         if tag in tokens:
+                            rev_dict['product'][attrs] = True
                             tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
                             for position in tag_pos:
                                 before = tokens[:position].split()
