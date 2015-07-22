@@ -16,6 +16,8 @@ from nltk.corpus import stopwords
 from collections import Counter
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
+from collections import defaultdict
+import re
 
 class Tagger(object):
     def __init__(self, filename):
@@ -23,12 +25,26 @@ class Tagger(object):
         with open('data/' + filename) as f:
             for line in f:
                 self.data.append(json.loads(line))
+            f.close()    
+        
+        self.positive = defaultdict(lambda:False)
+        self.negative = defaultdict(lambda:False)
+        with open('positive.txt') as f:
+            for line in f:
+                self.positive[line.split('\n')[0]] = True
+            f.close()
+        
+        with open('negative.txt') as f:
+            for line in f:
+                self.negative[line.split('\n')[0]] = True
+        self.positive['pros'] = True
+        self.negative['cons'] = True
         self.stopwords = stopwords.words('english')
-        self.product_tag = {'camera':['megapixel', 'ppi', 'front', 'rear', 'resolution' ],
-                            'battery': ['charging','charge','charger', 'longlasting', 'backup', 'internal'],
-                            'sound': ['music', 'loud', 'voice', 'volume', 'headphone', 'head phone', 'microphone', 'mic'],
-                            'display': ['touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
-                            'specs': ['memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
+        self.product_tag = {'camera':['camera','megapixel', 'ppi', 'front', 'rear', 'resolution' ],
+                            'battery': ['battery','charging','charge','charger', 'longlasting', 'backup', 'internal'],
+                            'sound': ['sound','audio','music', 'loud', 'voice', 'volume', 'headphone', 'head phone', 'microphone', 'mic'],
+                            'display': ['display', 'touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
+                            'specs': ['specs', 'memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
                             'looks': ['look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
 }
         self.price_tag = ['budget','price','expensive','cheap', 'cost']
@@ -60,7 +76,7 @@ class Tagger(object):
                 tokens = [word for word in nltk.word_tokenize(review) if word not in self.stopwords]
                 if joint == True:
                     tokens = ' '.join(tokens)
-                phone['reviews'][i][3] = tokens
+                phone['reviews'][i].append(tokens)
                 
     def get_tag_list(self):
         '''Returns all the tags in a list format. Just a helper function'''
@@ -81,7 +97,7 @@ class Tagger(object):
             for i, review in enumerate(phone['reviews']):
                 found = False
                 for word in self.tag_list:
-                    if word in review[3] or word in review[1]:
+                    if word in review[4] or word in review[1]:
                         found = True
                         break
                 if found == False:
@@ -94,10 +110,7 @@ class Tagger(object):
         for  phone in self.data:
             phone_reviews = []
             for i , content in enumerate(phone['noise']):
-                rating = content[0]
-                title = content[1]
-                author = content[2]
-                review = content[3]
+                review = content[4]
                 list_words = nltk.word_tokenize(review)
                 list_stem_words = [ ls.stem(word) for word in list_words]
                 phone_reviews.extend(list_stem_words)
@@ -105,6 +118,8 @@ class Tagger(object):
         self.noise_count = Counter(list_review_word)
         
     def tag_data(self):
+        '''Tag all the reviews into diff categories and store them under phone titles
+        '''
         for phone in self.data:
             self.tagged_data[phone['title']] = {'product':{'camera':set(),'battery':set(), 
                                                             'sound':set(), 'display':set(),
@@ -113,58 +128,131 @@ class Tagger(object):
                                                 'seller':set(), 'price':set()}
             for i, review in enumerate(phone['reviews']):
                 for tag in self.delivery_tag:
-                    if tag in review[3] or tag in review[1]:
+                    if tag in review[4] or tag in review[1]:
                         self.tagged_data[phone['title']]['delivery'].add(tuple(review))
                         
                 for tag in self.seller_tag:
-                    if tag in review[3] or tag in review[1]:
+                    if tag in review[4] or tag in review[1]:
                         self.tagged_data[phone['title']]['seller'].add(tuple(review))
                         
                 for tag in self.warranty_tag:
-                    if tag in review[3] or tag in review[1]:
+                    if tag in review[4] or tag in review[1]:
                         self.tagged_data[phone['title']]['warranty'].add(tuple(review))
                         
                 for tag in self.price_tag:
-                    if tag in review[3] or tag in review[1]:
+                    if tag in review[4] or tag in review[1]:
                         self.tagged_data[phone['title']]['price'].add(tuple(review))
                         
                 for tag in self.product_tag:
                     for attr in self.product_tag[tag]:
-                        if attr in review[3] or attr in review[1]:
+                        if attr in review[4] or attr in review[1]:
                             self.tagged_data[phone['title']]['product'][tag].add(tuple(review))
                         
     def store_mobile_list(self):
+        '''Stores a list of all mobile titles in the class'''
         self.phone_list = self.tagged_data.keys()
         self.phone_list.sort()
                     
     def get_mobile_reviews(self, mobile_name, tag = None, attr = None, limit=10):
-        print -1
+        '''Returns reviews with specific tags for the input mobile title.'''
         similar_phones = process.extract(mobile_name, self.phone_list, limit = limit)
         print similar_phones
-        print 0
         matched_phone = similar_phones[0][0]
         if tag != None:
             if tag in self.tags.keys():
                 if attr==None:
-                    print 1
                     return self.tagged_data[matched_phone][tag]
                 if attr in self.product_tag.keys() and tag=='product':
-                    print 2
                     return self.tagged_data[matched_phone][tag][attr]
                 else:
-                    print 3
                     return "Attribute not found"
             else:
                 return "Tag not found"
-        return self.tagged_data[matched_phone]        
+        return self.tagged_data[matched_phone]
         
+    def review_category(self, review):
+        '''Returns the tags of the input review
+        '''
+        review = str(self.remove_punc(review.lower().encode('utf-8')))
+        tokens = [word for word in nltk.word_tokenize(review) if word not in self.stopwords]
+        tokens = ' '.join(tokens)
+        rev_dict = {'product':{'camera':False,'battery':False,
+                               'sound':False, 'display':False,
+                               'looks':False,'specs':False},
+                    'delivery':False,
+                    'warranty':False,
+                    'seller':False,
+                    'price':False}
+        
+        for category in self.tags:
+            if category != 'product':
+                count = 0
+                countChanged = False
+                for tag in eval('self.' + category + '_tag'):
+                    nearby_words = []
+                    if tag in tokens:
+                        print 'entering tag in token'
+                        tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
+                        for position in tag_pos:
+                            #2 words just before the tag
+                            before = [tokens[:position].split()[-1], tokens[:position].split()[-2]]
+                            #Two words just before the tag
+                            after = [tokens[position:].split()[1], tokens[position:].split()[2]]
+                            
+                            nearby_words.extend(before)
+                            nearby_words.extend(after)
+                    for word in nearby_words:
+                        if self.positive[word] == True:
+                            count +=1
+                            countChanged= True
+                        if self.negative[word] == True:
+                            count -=1
+                            countChanged = True
+                #Assigning a sentiment to the specific category            
+                if count>0:
+                    rev_dict[category] = 'positive'
+                elif count<0:
+                    rev_dict[category] = 'negative'
+                elif count==0 and countChanged==True:
+                    rev_dict[category] = 'neutral'
+                    
+            else:
+                for attrs in self.product_tag:
+                    count = 0
+                    countChanged = False
+                    nearby_words = []
+                    for tag in self.product_tag[attrs]:
+                        if tag in tokens:
+                            tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
+                            for position in tag_pos:
+                                before = [tokens[:position].split()[-1], tokens[:position].split()[-2]]
+                                after = [tokens[position:].split()[1], tokens[position:].split()[2]]
+                                nearby_words.extend(before)
+                                nearby_words.extend(after)
+                    for word in nearby_words:
+                        if self.positive[word] == True:
+                            count +=1
+                            countChanged = True
+                        if self.negative[word] == True:
+                            count -=1
+                            countChanged = True
+                            
+                    if count>0:
+                        rev_dict['product'][attrs] = 'positive'
+                    elif count<0:
+                        rev_dict['product'][attrs] = 'negative'
+                    elif count ==0 and countChanged == True:
+                        rev_dict['product'][attrs] = 'neutral'
+                        
+        return rev_dict    
+
 if __name__=='__main__':
     amazon = Tagger('review.json')
-    amazon.clean_data(True)
-    amazon.filter_bad_reviews()
-    amazon.tag_data()
-    a = amazon.data[51]['title']
-    amazon.store_mobile_list()
+#    amazon.clean_data(True)
+#    amazon.filter_bad_reviews()
+#    amazon.tag_data()
+#    a = amazon.data[0]['reviews'][0][3]
+#    amazon.store_mobile_list()
     #print amazon.tagged_data[a]['product']
     
                   
