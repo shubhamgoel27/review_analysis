@@ -171,7 +171,7 @@ class Tagger(object):
         return self.tagged_data[matched_phone]
         
     def review_category(self, review):
-        '''Returns the tags of the input review
+        '''Returns the tags of the input review with their sentiment
         '''
         review = str(self.remove_punc(review.lower().encode('utf-8')))
         tokens = [word for word in nltk.word_tokenize(review) if word not in self.stopwords]
@@ -192,15 +192,20 @@ class Tagger(object):
                     nearby_words = []
                     if tag in tokens:
                         print 'entering tag in token'
+                        print tag
                         tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
                         for position in tag_pos:
-                            #2 words just before the tag
-                            before = [tokens[:position].split()[-1], tokens[:position].split()[-2]]
-                            #Two words just before the tag
-                            after = [tokens[position:].split()[1], tokens[position:].split()[2]]
-                            
-                            nearby_words.extend(before)
-                            nearby_words.extend(after)
+                            before = tokens[:position].split()
+                            after = tokens[position:].split()
+                            print before, after
+                            if len(before) > 0:
+                                nearby_words.extend([before[-1]])
+                                if len(before) > 1:
+                                    nearby_words.extend([before[-2]])
+                            if len(after) > 1:
+                                nearby_words.extend([after[1]])
+                                if len(after) > 2:
+                                    nearby_words.extend([after[2]])
                     for word in nearby_words:
                         if self.positive[word] == True:
                             count +=1
@@ -225,10 +230,16 @@ class Tagger(object):
                         if tag in tokens:
                             tag_pos = [pos.start() for pos in re.finditer(tag, tokens)]
                             for position in tag_pos:
-                                before = [tokens[:position].split()[-1], tokens[:position].split()[-2]]
-                                after = [tokens[position:].split()[1], tokens[position:].split()[2]]
-                                nearby_words.extend(before)
-                                nearby_words.extend(after)
+                                before = tokens[:position].split()
+                                after = tokens[position:].split()
+                                if len(before) > 0:
+                                    nearby_words.extend([before[-1]])
+                                    if len(before) > 1:
+                                        nearby_words.extend([before[-2]])
+                                if len(after) > 1:
+                                    nearby_words.extend([after[1]])
+                                    if len(after) > 2:
+                                        nearby_words.extend([after[2]])
                     for word in nearby_words:
                         if self.positive[word] == True:
                             count +=1
