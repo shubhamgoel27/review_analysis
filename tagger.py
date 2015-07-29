@@ -14,7 +14,6 @@ import nltk
 from nltk.stem import SnowballStemmer
 from nltk.corpus import stopwords
 from collections import Counter
-from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from collections import defaultdict
 import re
@@ -39,18 +38,22 @@ class Tagger(object):
                 self.negative[line.split('\n')[0]] = True
         self.positive['pros'] = True
         self.negative['cons'] = True
+        self.positive['mammoth'] = True	
+        self.positive['value'] = True
+        self.positive['sound'] = False
         self.stopwords = stopwords.words('english')
-        self.product_tag = {'camera':['camera','megapixel', 'ppi', 'front', 'rear', 'resolution' ],
-                            'battery': ['battery','charging','charge','charger', 'longlasting', 'backup', 'internal'],
+        self.stopwords.remove('not')
+        self.product_tag = {'camera':['photo', 'camera','megapixel', 'ppi', 'resolution' ],
+                            'battery': ['backup', 'battery','charging','charge','charger', 'longlasting', 'backup', 'internal'],
                             'sound': ['sound','audio','music', 'loud', 'voice', 'volume', 'headphone', 'head phone', 'microphone', 'mic'],
                             'display': ['display', 'touch','screen', 'bright', 'large', 'touchscreen', 'clear'],
                             'specs': ['specs', 'memory','heat', 'ram','bluetooth','android','performance','app', 'cdma', 'repair', 'software'],
-                            'build': ['durabl', 'durabil', 'look','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
+                            'build': ['build', 'built', 'durabl', 'durabil','color', 'weight','heavy','light', 'lightweight','metal','matte','plastic', 'solid', 'build', 'button']
 }
-        self.price_tag = ['budget','price','expensive','cheap', 'cost']
+        self.price_tag = ['budget','price','expensive','cheap', 'cost', 'value', 'money']
         self.delivery_tag = ['delivery','delivered','deliver', 'fast','quick', 'on time', 'service']
         self.warranty_tag = ['warranty']
-        self.seller_tag = ['seller', 'vendor']
+        self.seller_tag = ['seller', 'vendor', 'courier', 'amazon']
         
         self.tags = {'product': self.product_tag, 'price': self.price_tag,
                      'seller': self.seller_tag, 'warranty': self.warranty_tag,
@@ -66,8 +69,10 @@ class Tagger(object):
         
     def remove_punc(self, text):
         '''returns the text without any punctuations'''
-        return ''.join([t for t in text if t not in string.punctuation and t not in '0123456789' and ord(t)<128])
-        
+        text = text.replace('.', ' ')
+        text = text.replace("isn't", "is not")
+        return ''.join([t for t in text if t not in string.punctuation and t not in '1234567890' and ord(t)<128])
+                
     def clean_data(self, joint=False):
         '''Strips the data of all stopwords, punctuations and tokenizes reviews'''
         for phone in self.data:
@@ -209,10 +214,18 @@ class Tagger(object):
                                     nearby_words.extend([after[2]])
                     for word in nearby_words:
                         if self.positive[word] == True:
-                            count +=1
+                            #print nearby_words
+                            if 'not' in nearby_words:
+                                #print 'not is there'
+                                count -=2
+                            else:
+                                count +=2
                             countChanged= True
                         if self.negative[word] == True:
-                            count -=1
+                            if 'not' in nearby_words:
+                                count -=1
+                            else:
+                                count -=2
                             countChanged = True
                 #Assigning a sentiment to the specific category            
                 if count>0:
@@ -244,10 +257,16 @@ class Tagger(object):
                                         nearby_words.extend([after[2]])
                     for word in nearby_words:
                         if self.positive[word] == True:
-                            count +=1
+                            if 'not' in nearby_words:
+                                count -=2
+                            else:
+                                count +=2
                             countChanged = True
                         if self.negative[word] == True:
-                            count -=1
+                            if 'not' in nearby_words:
+                                count -=1
+                            else:
+                                count -=2
                             countChanged = True
                             
                     if count>0:
